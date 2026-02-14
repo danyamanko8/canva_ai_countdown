@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meditation Timer</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Space Grotesk', sans-serif; }
+    
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 40px rgba(167, 139, 250, 0.3); }
+      50% { box-shadow: 0 0 80px rgba(167, 139, 250, 0.6); }
+    }
+    
+    .pulse-ring {
+      animation: pulse-ring 4s ease-in-out infinite;
+    }
+    
+    .breathe {
+      animation: breathe 4s ease-in-out infinite;
+    }
+    
+    .glow {
+      animation: glow 3s ease-in-out infinite;
+    }
+    
+    .timer-circle {
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      backdrop-filter: blur(10px);
+    }
+    
+    .progress-ring {
+      transition: stroke-dashoffset 1s linear;
+    }
+    
+    .btn-glass {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-glass:hover {
+      background: rgba(255,255,255,0.25);
+      transform: translateY(-2px);
+    }
+    
+    .btn-glass:active {
+      transform: translateY(0);
+    }
+    
+    .completed .timer-circle {
+      animation: glow 2s ease-in-out infinite;
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full m-0 overflow-auto">
+  <main id="app-container" class="w-full min-h-full flex flex-col items-center justify-center p-6" style="background: linear-gradient(135deg, #1e3a8a 0%, #4c1d95 50%, #7c3aed 100%);"><!-- Decorative circles in background -->
+   <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
+   </div>
+   <div id="timer-wrapper" class="relative z-10 flex flex-col items-center"><!-- Title -->
+    <h1 id="timer-title" class="text-white font-bold text-3xl md:text-4xl mb-8 text-center tracking-tight">Meditation</h1><!-- Main timer -->
+    <div class="relative"><!-- Pulsing rings -->
+     <div class="absolute inset-0 flex items-center justify-center">
+      <div class="pulse-ring w-72 h-72 md:w-80 md:h-80 rounded-full border-2 border-purple-300/30 absolute"></div>
+      <div class="pulse-ring w-80 h-80 md:w-96 md:h-96 rounded-full border border-purple-300/20 absolute" style="animation-delay: -1s;"></div>
+      <div class="pulse-ring w-96 h-96 md:w-[28rem] md:h-[28rem] rounded-full border border-purple-300/10 absolute" style="animation-delay: -2s;"></div>
+     </div><!-- Timer circle -->
+     <div id="timer-display" class="timer-circle breathe w-64 h-64 md:w-72 md:h-72 rounded-full flex flex-col items-center justify-center relative border border-white/20"><!-- SVG progress -->
+      <svg class="absolute inset-0 w-full h-full -rotate-90" viewbox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="2" /> <circle id="progress-ring" class="progress-ring" cx="50" cy="50" r="46" fill="none" stroke="url(#gradient)" stroke-width="3" stroke-linecap="round" stroke-dasharray="289.027" stroke-dashoffset="0" /> <defs>
+        <lineargradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+         <stop offset="0%" stop-color="#a78bfa" />
+         <stop offset="100%" stop-color="#60a5fa" />
+        </lineargradient>
+       </defs>
+      </svg><!-- Time --> <span id="time-display" class="text-white font-bold text-5xl md:text-6xl tracking-wider z-10"> 15:00 </span> <!-- Status --> <span id="status-text" class="text-purple-200/80 text-sm mt-2 z-10"> Ready to start </span>
+     </div>
+    </div><!-- Motivational text -->
+    <p id="motivational-text" class="text-purple-200/70 text-center mt-8 mb-8 text-lg max-w-xs">Find peace in every breath</p><!-- Control buttons -->
+    <div class="flex gap-4 flex-wrap justify-center"><button id="start-btn" class="btn-glass text-white font-bold py-4 px-8 rounded-full text-lg flex items-center gap-2">
+      <svg class="w-6 h-6" fill="currentColor" viewbox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+      </svg> Start </button> <button id="pause-btn" class="btn-glass text-white font-bold py-4 px-8 rounded-full text-lg hidden items-center gap-2">
+      <svg class="w-6 h-6" fill="currentColor" viewbox="0 0 20 20"><path d="M5.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75A.75.75 0 007.25 3h-1.5zM12.75 3a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-1.5z" />
+      </svg> Pause </button> <button id="reset-btn" class="btn-glass text-white/70 font-bold py-4 px-6 rounded-full text-lg flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0113.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+      </svg> Reset </button>
+    </div><!-- Quick presets -->
+    <div class="flex gap-3 mt-8 flex-wrap justify-center"><button class="preset-btn btn-glass text-white/80 py-2 px-4 rounded-full text-sm" data-minutes="5">5 min</button> <button class="preset-btn btn-glass text-white py-2 px-4 rounded-full text-sm border border-white/30" data-minutes="15">15 min</button> <button class="preset-btn btn-glass text-white/80 py-2 px-4 rounded-full text-sm" data-minutes="20">20 min</button> <button class="preset-btn btn-glass text-white/80 py-2 px-4 rounded-full text-sm" data-minutes="30">30 min</button>
+    </div>
+   </div>
+  </main>
+  <script>
+    // Default configuration
+    const defaultConfig = {
+      timer_title: 'Meditation',
+      motivational_text: 'Find peace in every breath',
+      primary_color: '#7c3aed',
+      secondary_color: '#1e3a8a',
+      text_color: '#ffffff',
+      accent_color: '#a78bfa',
+      surface_color: 'rgba(255,255,255,0.15)',
+      font_family: 'Space Grotesk',
+      font_size: 16
+    };
+
+    // Timer state
+    let totalSeconds = 15 * 60;
+    let remainingSeconds = totalSeconds;
+    let timerInterval = null;
+    let isRunning = false;
+    let selectedMinutes = 15;
+
+    // DOM elements
+    const timeDisplay = document.getElementById('time-display');
+    const statusText = document.getElementById('status-text');
+    const progressRing = document.getElementById('progress-ring');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const timerDisplay = document.getElementById('timer-display');
+    const timerWrapper = document.getElementById('timer-wrapper');
+    const presetBtns = document.querySelectorAll('.preset-btn');
+
+    const circumference = 2 * Math.PI * 46;
+    progressRing.style.strokeDasharray = circumference;
+
+    // Audio context for notification
+    let audioContext = null;
+
+    function playNotificationSound() {
+      try {
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(528, audioContext.currentTime);
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 2);
+        
+        // Second tone for harmony
+        setTimeout(() => {
+          const osc2 = audioContext.createOscillator();
+          const gain2 = audioContext.createGain();
+          osc2.connect(gain2);
+          gain2.connect(audioContext.destination);
+          osc2.frequency.setValueAtTime(396, audioContext.currentTime);
+          osc2.type = 'sine';
+          gain2.gain.setValueAtTime(0, audioContext.currentTime);
+          gain2.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.1);
+          gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2.5);
+          osc2.start(audioContext.currentTime);
+          osc2.stop(audioContext.currentTime + 2.5);
+        }, 300);
+      } catch (e) {
+        console.error('Audio not supported');
+      }
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    function updateDisplay() {
+      timeDisplay.textContent = formatTime(remainingSeconds);
+      const progress = (totalSeconds - remainingSeconds) / totalSeconds;
+      const offset = circumference * (1 - progress);
+      progressRing.style.strokeDashoffset = offset;
+    }
+
+    function startTimer() {
+      if (remainingSeconds <= 0) {
+        resetTimer();
+      }
+      
+      isRunning = true;
+      startBtn.classList.add('hidden');
+      pauseBtn.classList.remove('hidden');
+      pauseBtn.classList.add('flex');
+      statusText.textContent = 'Breathe deeply...';
+      
+      timerInterval = setInterval(() => {
+        remainingSeconds--;
+        updateDisplay();
+        
+        if (remainingSeconds <= 0) {
+          completeTimer();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      isRunning = false;
+      clearInterval(timerInterval);
+      startBtn.classList.remove('hidden');
+      pauseBtn.classList.add('hidden');
+      pauseBtn.classList.remove('flex');
+      statusText.textContent = 'Paused';
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      remainingSeconds = totalSeconds;
+      updateDisplay();
+      startBtn.classList.remove('hidden');
+      pauseBtn.classList.add('hidden');
+      pauseBtn.classList.remove('flex');
+      statusText.textContent = 'Ready to start';
+      timerWrapper.classList.remove('completed');
+    }
+
+    function completeTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      startBtn.classList.remove('hidden');
+      pauseBtn.classList.add('hidden');
+      statusText.textContent = '✨ Session complete!';
+      timerWrapper.classList.add('completed');
+      playNotificationSound();
+    }
+
+    function setPreset(minutes) {
+      selectedMinutes = minutes;
+      totalSeconds = minutes * 60;
+      remainingSeconds = totalSeconds;
+      updateDisplay();
+      
+      presetBtns.forEach(btn => {
+        if (parseInt(btn.dataset.minutes) === minutes) {
+          btn.classList.add('border', 'border-white/30');
+          btn.classList.remove('text-white/80');
+          btn.classList.add('text-white');
+        } else {
+          btn.classList.remove('border', 'border-white/30');
+          btn.classList.add('text-white/80');
+          btn.classList.remove('text-white');
+        }
+      });
+      
+      if (isRunning) {
+        pauseTimer();
+      }
+      statusText.textContent = 'Ready to start';
+      timerWrapper.classList.remove('completed');
+    }
+
+    // Event listeners
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+    
+    presetBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        setPreset(parseInt(btn.dataset.minutes));
+      });
+    });
+
+    // Element SDK
+    async function onConfigChange(config) {
+      const title = config.timer_title || defaultConfig.timer_title;
+      const motivational = config.motivational_text || defaultConfig.motivational_text;
+      const fontFamily = config.font_family || defaultConfig.font_family;
+      const fontSize = config.font_size || defaultConfig.font_size;
+      
+      document.getElementById('timer-title').textContent = title;
+      document.getElementById('motivational-text').textContent = motivational;
+      
+      document.body.style.fontFamily = `${fontFamily}, sans-serif`;
+      document.getElementById('timer-title').style.fontSize = `${fontSize * 2}px`;
+      document.getElementById('motivational-text').style.fontSize = `${fontSize * 1.125}px`;
+      timeDisplay.style.fontSize = `${fontSize * 3.5}px`;
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (value) => {
+            config.font_family = value;
+            window.elementSdk.setConfig({ font_family: value });
+          }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (value) => {
+            config.font_size = value;
+            window.elementSdk.setConfig({ font_size: value });
+          }
+        }
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ['timer_title', config.timer_title || defaultConfig.timer_title],
+        ['motivational_text', config.motivational_text || defaultConfig.motivational_text]
+      ]);
+    }
+
+    // Initialize
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+    
+    updateDisplay();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cdc47e4c5fbd935',t:'MTc3MTA2OTEyMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
